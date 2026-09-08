@@ -48,6 +48,14 @@ export default function LiquidCanvas({ controls, layoutRef }: {controls: Mutable
       uKinds:getLoc('uKinds[0]'),
     };
     let width=1,height=1,raf=0,time=0,last=0,px=0,py=0,hidden=document.hidden;
+    // CSS layout coordinates exclude transient GSAP transforms during viewport changes.
+    const layoutOrigin=(element:HTMLElement)=>{
+      let x=0,y=0;
+      for(let node:HTMLElement|null=element;node;node=node.offsetParent as HTMLElement|null){
+        x+=node.offsetLeft;y+=node.offsetTop;
+      }
+      return {x,y};
+    };
     const resize=()=>{
       const rect=canvas.getBoundingClientRect();
       const dpr=Math.min(window.devicePixelRatio||1,1.55);
@@ -60,16 +68,22 @@ export default function LiquidCanvas({ controls, layoutRef }: {controls: Mutable
       height=Math.max(1,Math.floor(rect.height*scale));
       canvas.width=width;canvas.height=height;gl.viewport(0,0,width,height);
       const shapes=new Float32Array(32),kinds=new Float32Array(8);
+      const origin=layoutOrigin(canvas);
       layoutRef.current?.querySelectorAll<HTMLElement>('.glass-cell').forEach((el,i)=>{
         if(i>=8)return;
-        const box=el.getBoundingClientRect(),unit=4/rect.height;
-        shapes.set([(box.left+box.width/2-rect.width/2)*unit,(rect.height/2-box.top-box.height/2)*unit,box.width/2*unit,box.height/2*unit],i*4);
+        const box=layoutOrigin(el),unit=4/rect.height;
+        const left=box.x-origin.x,top=box.y-origin.y;
+        shapes.set([(left+el.offsetWidth/2-rect.width/2)*unit,(rect.height/2-top-el.offsetHeight/2)*unit,el.offsetWidth/2*unit,el.offsetHeight/2*unit],i*4);
         kinds[i]=Number(el.dataset.glass||0);
       });
       if(uniforms.uShapes)gl.uniform4fv(uniforms.uShapes,shapes);
       if(uniforms.uKinds)gl.uniform1fv(uniforms.uKinds,kinds);
     };
     const observer=new ResizeObserver(resize);observer.observe(canvas);if(layoutRef.current)observer.observe(layoutRef.current);resize();
+    let disposed=false;
+    window.addEventListener('resize',resize);
+    window.visualViewport?.addEventListener('resize',resize);
+    document.fonts.ready.then(()=>{if(!disposed)resize();});
     const render=(now:number)=>{
       const dt=Math.min((now-last)/1000,.05);last=now;const c=controls.current;
       if(!hidden){
@@ -91,7 +105,9 @@ export default function LiquidCanvas({ controls, layoutRef }: {controls: Mutable
     const visibility=()=>{hidden=document.hidden;};document.addEventListener('visibilitychange',visibility);
     const lost=(e:Event)=>{e.preventDefault();setFallback(true);cancelAnimationFrame(raf);};canvas.addEventListener('webglcontextlost',lost);
     raf=requestAnimationFrame(render);
-    return()=>{cancelAnimationFrame(raf);observer.disconnect();document.removeEventListener('visibilitychange',visibility);canvas.removeEventListener('webglcontextlost',lost);gl.deleteBuffer(buffer);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);};
+    return()=>{disposed=true;cancelAnimationFrame(raf);observer.disconnect();window.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('resize',resize);document.removeEventListener('visibilitychange',visibility);canvas.removeEventListener('webglcontextlost',lost);gl.deleteBuffer(buffer);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);};
   },[controls,layoutRef,fragment]);
   return <><canvas ref={ref} className="liquid-canvas" aria-hidden="true"/>{fallback&&<div className="liquid-fallback" aria-hidden="true"/>}</>;
 }
+
+
