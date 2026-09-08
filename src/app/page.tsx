@@ -336,7 +336,7 @@ export default function Portfolio(){
         </div>
       </main>
       {view!=='home'&&<main ref={storyPanel} className={`content-panel ${view==='experience'?'experience-shell':''}`}>
-        {view!=='experience'&&<div className="panel-top"><span>{view==='about'?'ABOUT ME':'03 / WHAT’S NEXT'}</span></div>}
+        {view==='about'&&<div className="panel-top"><span>ABOUT ME</span></div>}
         {view==='about'&&<div className="about-poster" lang="en">
           <div className="poster-margin-left panel-detail" aria-hidden="true">
             <span>{profile.fullName}</span>
@@ -402,7 +402,7 @@ export default function Portfolio(){
           </div>
         </div>}
         {view==='experience'&&<ExperienceScroll reduced={reduced} position={experiencePosition} onContact={()=>navigate('contact')}/>} 
-        {view==='contact'&&<div className="contact-content"><p className="eyebrow panel-detail">THE NEXT GOOD THING STARTS WITH A HELLO.</p>
+        {view==='contact'&&<div className="contact-content">
           <h1 ref={headingRef} tabIndex={-1}><span className="line-mask"><span className="panel-reveal">Have a feeling?</span></span><span className="line-mask"><span className="panel-reveal">Let’s follow it.</span></span></h1>
           <div className="contact-email panel-detail"><a href={`tel:${profile.phoneHref}`}>{profile.phone}<Arrow diagonal/></a><button onClick={copyPhone} aria-label="Copy phone number">{copied?'Copied ✓':'Copy ↗'}</button></div>
           <p className="contact-note panel-detail">For interesting ideas, thoughtful collaborations,<br/>and things that don’t quite exist yet.</p>
@@ -419,6 +419,7 @@ export default function Portfolio(){
     <span className="sr-only" role="status">{copied?'Phone number copied to clipboard':''}</span>
   </div>;
 }
+
 
 
 
